@@ -1,0 +1,62 @@
+
+import json
+import subprocess
+from core.log_manager import LogManager
+
+"""
+    @package core
+    ===============
+    @file   at_ping.py
+    @author Ivan Jimenez A. <ijimenez@atentus.com>
+            (c) Servicios de Monitoreo S.A. - Santiago, Chile
+    @brief  Clase encargada de realizar ping y devolver resultado, necesita paquete pingparsing
+    @date   Feb/2021
+"""
+# Solicitud de Ping
+# ARQTTcpAtTools:1|@@| {"monitor": "192.168.2.2", "host": "www.google.com", "bytes":32, "key":"eef910ab4f71097ced27d1b9dbc94d4b", "ciclos":4, "timeout":20}
+
+class AtPing():
+
+    def pings(self,host,ciclos,bites,tiempofuera):
+        self._log = LogManager()
+        self._log.logInfo('Realizando Ping', self.__class__.__name__)
+
+        print("Realizando Ping")
+
+        if ciclos==0:
+            ciclos=4
+        if bites==0:
+            bites=6
+
+
+        try:
+            #Se usa pingparsing para obtener el resultado de ping en un json
+            #print("pingparsing","-c " + ciclos,"-s " + bites , host)
+           # self._log.logInfo("\n\n1\n\n", self.__class__.__name__)
+           # self._log.logInfo("pingparsing , -c " + str(ciclos) + " -s " + str(bites) + " " +  host + " , timeout = " + str(tiempofuera), self.__class__.__name__)
+           # self._log.logInfo("\n\n2\n\n", self.__class__.__name__)
+            resultado = subprocess.check_output(["pingparsing","-c " + ciclos,"-s " + bites , host],timeout = tiempofuera)
+            
+            self._log.logInfo("\n\n3\n\n", self.__class__.__name__)            resultado = resultado.decode('utf8').replace("'", '"')
+            self._log.logInfo("\n\n4\n\n", self.__class__.__name__)
+
+
+            data = json.loads(resultado)
+            reply = json.dumps(data, sort_keys=True)
+            print(reply)
+        except subprocess.CalledProcessError as e:
+            self._log.logInfo("error codigo : " + str(e.returncode), self.__class__.__name__)
+            reply ='{"codigo_error":"1","error":"Host no encontrado"}'
+        except subprocess.TimeoutExpired as e:
+            self._log.logInfo("error timeout", self.__class__.__name__)
+            reply = '{"codigo_error":"2","error":"Timeout excedido"}'
+        except Exception as ex:
+          
+            template = "Error de tipo  {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            self._log.logInfo(message, self.__class__.__name__)
+
+        self._log.logInfo('Ping terminado', self.__class__.__name__)
+        print("Ping terminado\n")
+
+        return reply
